@@ -1,14 +1,16 @@
-# Ask Hugh
-Ask Hugh is a web application that allows you to record audio, transcribe it, and then ask a question based on the transcription. The application uses the Whisper API, the ChatGPT API, and the ElevenLabs API. 
+# aws-entelai
+A POC web application focusing on merging aws polly and transcribe with [entelai's](https://entelai.com/en/) api
 
 ### Installation
 1. Clone this repository:
-`git clone https://github.com/IgnoranceAI/hugh.git`
+`git clone https://github.com/FelipeCabelloE/aws-entelai.git`
 
 2. Install the Python packages:
 `pip install -r requirements.txt`
 
-3. Add your API keys to `app.py`:    
+3. Add your API keys to `app.py`:
+##TODO update the requirements to showcase aws and entelais keys
+
 `OPENAI_API_KEY = "YOUR API KEY HERE"`.   
 `ELEVENLABS_API_KEY = "YOUR API KEY HERE"`
 
@@ -21,7 +23,7 @@ Ask Hugh is a web application that allows you to record audio, transcribe it, an
 
 
 ### Credits
-Record and Ask was created by Artificial Ignorance using Flask, OpenAI’s Whisper, OpenAI’s ChatGPT, and ElevenLabs. 
+This project is a fork of Artificial Ignorance's hugh, using Flask, OpenAI’s Whisper, OpenAI’s ChatGPT, and ElevenLabs. 
 
 ### License
 This project is licensed under the MIT License - see the LICENSE file for details.
