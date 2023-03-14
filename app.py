@@ -2,7 +2,10 @@ import openai
 import os
 import requests
 import uuid
-from flask import Flask, request, jsonify, send_file, render_template
+from flask import Flask, request, jsonify, send_file, render_template, Response
+
+from boto3 import Session
+from botocore.exceptions import BotoCoreError, ClientError
 
 
 # Add your OpenAI API key
@@ -18,7 +21,50 @@ ELEVENLABS_VOICE_SIMILARITY = 0.75
 ELEVENLABS_VOICE_NAME = "Hugh"
 ELEVENLABS_ALL_VOICES = []
 
+
+# Mapping the output format used in the client to the content type for the
+# response
+AUDIO_FORMATS = {"ogg_vorbis": "audio/ogg",
+                 "mp3": "audio/mpeg",
+                 "pcm": "audio/wave; codecs=1"}
+
+# Create a client using the credentials and region defined in the adminuser
+# section of the AWS credentials and configuration files
+session = Session(profile_name="amazonpoly-felipecabello")
+polly = session.client("polly")
+transcribe_client = boto3.client('transcribe')
+
+
 app = Flask(__name__)
+
+
+# Simple exception class
+class InvalidUsage(Exception):
+    status_code = 400
+
+    def __init__(self, message, status_code=None, payload=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.payload = payload
+
+    def to_dict(self):
+        rv = dict(self.payload or ())
+        rv['message'] = self.message
+        return rv
+
+
+# Register error handler
+@app.errorhandler(InvalidUsage)
+def handle_invalid_usage(error):
+    response = jsonify(error.to_dict())
+    response.status_code = error.status_code
+    return response
+
+
+
+
 
 
 def get_voices() -> list:
@@ -145,4 +191,4 @@ if ELEVENLABS_API_KEY:
         ELEVENLABS_VOICE_NAME = ELEVENLABS_ALL_VOICES[0]["name"]
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

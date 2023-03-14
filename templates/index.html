@@ -18,15 +18,17 @@
     <div class="container text-center mt-5">
         <div class="row">
             <div class="col-12 col-md-6 col-xl-4 mx-auto">
-                <img class="mb-3" src="/static/hugh.png" alt="" style="height:250px">
+                <img class="mb-3" src="/static/lucia_icon_no_background.png" alt="" style="height:250px">
                 <h1 class="mb-4">Ask {{voice}}</h1>
                 <form>
                     <div class="form-group mb-3">
-                        <textarea id="transcription-box" class="form-control" rows="3" placeholder="Type a question or press record."></textarea>
+                        <textarea id="transcription-box" class="form-control" rows="3" placeholder="Escribe una pregunta o presiona grabar."></textarea>
                     </div>
                     <div class="form-group d-flex justify-content-between">
                         <button type="button" class="btn btn-danger" style="width:48%" id="record-button">Record</button>
-                        <button type="button" class="btn btn-primary" style="width:48%" id="ask-button">Ask</button>
+                        <select id="voice" name="voiceId" disabled>
+                            <option value="">Choose a voice...</option>
+                        <button type="button" class="btn btn-primary" style="width:48%" id="ask-button">Pregunta</button>
                     </div>
                 </form>
                 <div class="audio-player">
@@ -39,8 +41,56 @@
         </div>
     </div>
     <script>
+        var AUDIO_FORMATS = {
+            'ogg_vorbis': 'audio/ogg',
+            'mp3': 'audio/mpeg',
+            'pcm': 'audio/wave; codecs=1'
+        };
+
+        /**
+         * Handles fetching JSON over HTTP
+         */
+        function fetchJSON(method, url, onSuccess, onError) {
+            var request = new XMLHttpRequest();
+            request.open(method, url, true);
+            request.onload = function () {
+                // If loading is complete
+                if (request.readyState === 4) {
+                    // if the request was successful
+                    if (request.status === 200) {
+                        var data;
+
+                        // Parse the JSON in the response
+                        try {
+                            data = JSON.parse(request.responseText);
+                        } catch (error) {
+                            onError(request.status, error.toString());
+                        }
+
+                        onSuccess(data);
+                    } else {
+                        onError(request.status, request.responseText)
+                    }
+                }
+            };
+
+            request.send();
+        }
+
+        /**
+         * Returns a list of audio formats supported by the browser
+         */
+        function getSupportedAudioFormats(player) {
+            return Object.keys(AUDIO_FORMATS)
+                .filter(function (format) {
+                    var supported = player.canPlayType(AUDIO_FORMATS[format]);
+                    return supported === 'probably' || supported === 'maybe';
+                });
+        }
+
         $(document).ready(() => {
             // Get references to HTML elements
+            var voiceMenu = $('#voice');
             const recordButton = $('#record-button');
             const transcriptionBox = $('#transcription-box');
             const askButton = $('#ask-button');
@@ -53,17 +103,46 @@
 
             // Initialize TypeIt
             new TypeIt("#response-text", {
-              strings: "How can I help?",
+              strings: "Bienvenido\n¿Cómo te puedo ayudar?",
               speed: 40,
               waitUntilVisible: true,
               cursorChar: "▊",
             }).go();
+            // Load the list of available voices and display them in a menu
+            fetchJSON('GET', '/voices',
+                // If the request succeeds
+                function (voices) {
+                    var container = document.createDocumentFragment();
+
+                    // Build the list of options for the menu
+                    voices.forEach(function (voice) {
+                        var option = document.createElement('option');
+                        option.value = voice['Id'];
+                        option.innerHTML = voice['Name'] + ' (' +
+                            voice['Gender'] + ', ' +
+                            voice['LanguageName'] + ')';
+                        container.appendChild(option);
+                    });
+
+                    // Add the options to the menu and enable the form field
+                    voiceMenu.appendChild(container);
+                    voiceMenu.disabled = false;
+                },
+                // If the request fails
+                function (status, response) {
+                    // Display a message in case loading data from the server
+                    // fails
+                    alert(status + ' - ' + response);
+                });
+
+
+
 
             // Ask question and play audio when ask button is clicked
             askButton.click(() => {
                 disableButton(recordButton);
                 disableButton(askButton);
-                askButton[0].innerHTML = "Thinking...";
+                askButton[0].innerHTML = "Pensando...";
                 conversation.push({role: "user", "content": transcriptionBox.val()})
                 const textData = { conversation: conversation };
                 $.ajax({
@@ -86,7 +165,7 @@
                         audioElement.play();
                         enableButton(recordButton);
                         enableButton(askButton);
-                        askButton[0].innerHTML = "Ask";
+                        askButton[0].innerHTML = "Pregunta";
                     }
                 });
             });
@@ -103,7 +182,7 @@
                 };
                 mediaRecorder.onstop = () => {
                     disableButton(recordButton);
-                    recordButton[0].innerHTML = "Transcribing...";
+                    recordButton[0].innerHTML = "Transcribiendo...";
                     const audioData = new Blob(chunks, { type: 'audio/wav' });
                     const formData = new FormData();
                     formData.append('file', audioData, 'audio.wav');
@@ -116,7 +195,7 @@
                         success: (data) => {
                             transcriptionBox.val(data.text);
                             enableButton(recordButton);
-                            recordButton[0].innerHTML = "Record";
+                            recordButton[0].innerHTML = "Grabar";
                             askButton.click();
                         }
                     });
@@ -129,7 +208,7 @@
                     mediaRecorder.stop();
                     recording = false;
                 } else {
-                    recordButton[0].innerHTML = "Recording...";
+                    recordButton[0].innerHTML = "Grabando...";
                     chunks = [];
                     mediaRecorder.start();
                     recording = true;

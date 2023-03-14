@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../pythonpoly_example"
+		},
+		{
+			"path": "../aws-amazon-polly-flask-sample"
+		}
+	],
+	"settings": {}
+}
