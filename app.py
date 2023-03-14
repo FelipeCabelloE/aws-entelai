@@ -6,7 +6,7 @@ from flask import Flask, request, jsonify, send_file, render_template, Response
 
 from boto3 import Session
 from botocore.exceptions import BotoCoreError, ClientError
-
+from src import aws_transcribe 
 
 # Add your OpenAI API key
 OPENAI_API_KEY = ""
@@ -18,7 +18,7 @@ ELEVENLABS_VOICE_STABILITY = 0.30
 ELEVENLABS_VOICE_SIMILARITY = 0.75
 
 # Choose your favorite ElevenLabs voice
-ELEVENLABS_VOICE_NAME = "Hugh"
+ELEVENLABS_VOICE_NAME = "Lucia"
 ELEVENLABS_ALL_VOICES = []
 
 
@@ -32,7 +32,8 @@ AUDIO_FORMATS = {"ogg_vorbis": "audio/ogg",
 # section of the AWS credentials and configuration files
 session = Session(profile_name="amazonpoly-felipecabello")
 polly = session.client("polly")
-transcribe_client = boto3.client('transcribe')
+transcribe_client = session.client('transcribe')
+s3_client = session.client('s3')
 
 
 app = Flask(__name__)
@@ -66,33 +67,28 @@ def handle_invalid_usage(error):
 
 
 
-
-def get_voices() -> list:
-    """Fetch the list of available ElevenLabs voices.
-
-    :returns: A list of voice JSON dictionaries.
-    :rtype: list
-
-    """
-    url = "https://api.elevenlabs.io/v1/voices"
-    headers = {
-        "xi-api-key": ELEVENLABS_API_KEY
-    }
-    response = requests.get(url, headers=headers)
-    return response.json()["voices"]
-
-
 def transcribe_audio(filename: str) -> str:
     """Transcribe audio to text.
+    Sends audifile to s3, starts a transcription job, then waits for it to finnish and sends back the answer
 
     :param filename: The path to an audio file.
     :returns: The transcribed text of the file.
     :rtype: str
 
     """
-    with open(filename, "rb") as audio_file:
-        transcript = openai.Audio.transcribe("whisper-1", audio_file)
-    return transcript.text
+    bucket_name = 'entelai-transcribe-polly-flaskdemo'
+    response = s3_client.upload_file(filename, bucket_name, filename)
+    media_uri = f's3://{bucket_name}/{filename}'
+    job_name = f'{filename[9:]}'
+    aws_transcribe.start_job(job_name=job_name, media_uri=media_uri, media_format='ogg', language_code='es-ES', transcribe_client=transcribe_client)
+    transcribe_waiter = aws_transcribe.TranscribeCompleteWaiter(transcribe_client)
+    transcribe_waiter.wait(job_name)
+    job_simple = aws_transcribe.get_job(job_name, transcribe_client)
+    transcript_simple = requests.get(
+        job_simple['Transcript']['TranscriptFileUri']).json()
+
+    return transcript_simple['results']['transcripts'][0]['transcript']
+    
 
 
 def generate_reply(conversation: list) -> str:
@@ -158,10 +154,18 @@ def transcribe():
     if 'file' not in request.files:
         return 'No file found', 400
     file = request.files['file']
-    recording_file = f"{uuid.uuid4()}.wav"
+    recording_file = f"{uuid.uuid4()}.ogg"
     recording_path = f"uploads/{recording_file}"
     os.makedirs(os.path.dirname(recording_path), exist_ok=True)
     file.save(recording_path)
+    ##file information
+    import filetype
+    kind = filetype.guess(recording_path)
+    if kind is None:
+        print('Cannot guess file type!')
+    else:
+        print('File extension: %s' % kind.extension)
+        print('File MIME type: %s' % kind.mime)
     transcription = transcribe_audio(recording_path)
     return jsonify({'text': transcription})
 

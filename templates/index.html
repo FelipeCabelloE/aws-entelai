@@ -26,10 +26,10 @@
                     </div>
                     <div class="form-group d-flex justify-content-between">
                         <button type="button" class="btn btn-danger" style="width:48%" id="record-button">Record</button>
-                        <select id="voice" name="voiceId" disabled>
-                            <option value="">Choose a voice...</option>
+                        
                         <button type="button" class="btn btn-primary" style="width:48%" id="ask-button">Pregunta</button>
                     </div>
+
                 </form>
                 <div class="audio-player">
                     <audio id="audio-element"></audio>
@@ -41,52 +41,7 @@
         </div>
     </div>
     <script>
-        var AUDIO_FORMATS = {
-            'ogg_vorbis': 'audio/ogg',
-            'mp3': 'audio/mpeg',
-            'pcm': 'audio/wave; codecs=1'
-        };
-
-        /**
-         * Handles fetching JSON over HTTP
-         */
-        function fetchJSON(method, url, onSuccess, onError) {
-            var request = new XMLHttpRequest();
-            request.open(method, url, true);
-            request.onload = function () {
-                // If loading is complete
-                if (request.readyState === 4) {
-                    // if the request was successful
-                    if (request.status === 200) {
-                        var data;
-
-                        // Parse the JSON in the response
-                        try {
-                            data = JSON.parse(request.responseText);
-                        } catch (error) {
-                            onError(request.status, error.toString());
-                        }
-
-                        onSuccess(data);
-                    } else {
-                        onError(request.status, request.responseText)
-                    }
-                }
-            };
-
-            request.send();
-        }
-
-        /**
-         * Returns a list of audio formats supported by the browser
-         */
-        function getSupportedAudioFormats(player) {
-            return Object.keys(AUDIO_FORMATS)
-                .filter(function (format) {
-                    var supported = player.canPlayType(AUDIO_FORMATS[format]);
-                    return supported === 'probably' || supported === 'maybe';
-                });
-        }
+         
 
         $(document).ready(() => {
             // Get references to HTML elements
@@ -96,6 +51,7 @@
             const askButton = $('#ask-button');
             const audioElement = $('#audio-element')[0];
             const conversation = [];
+
 
             // Helper methods
             const disableButton = (btn) => { btn.addClass("loading").prop("disabled", true); }
@@ -109,33 +65,7 @@
               cursorChar: "▊",
             }).go();
             // Load the list of available voices and display them in a menu
-            fetchJSON('GET', '/voices',
-                // If the request succeeds
-                function (voices) {
-                    var container = document.createDocumentFragment();
-
-                    // Build the list of options for the menu
-                    voices.forEach(function (voice) {
-                        var option = document.createElement('option');
-                        option.value = voice['Id'];
-                        option.innerHTML = voice['Name'] + ' (' +
-                            voice['Gender'] + ', ' +
-                            voice['LanguageName'] + ')';
-                        container.appendChild(option);
-                    });
-
-                    // Add the options to the menu and enable the form field
-                    voiceMenu.appendChild(container);
-                    voiceMenu.disabled = false;
-                },
-                // If the request fails
-                function (status, response) {
-                    // Display a message in case loading data from the server
-                    // fails
-                    alert(status + ' - ' + response);
-                });
-
-
+        
 
 
             // Ask question and play audio when ask button is clicked
