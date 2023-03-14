@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify, send_file, render_template, Response
 from boto3 import Session
 from botocore.exceptions import BotoCoreError, ClientError
 from src import aws_transcribe 
-
+from src import entelai_parser
 # Add your OpenAI API key
 OPENAI_API_KEY = ""
 openai.api_key = OPENAI_API_KEY
@@ -92,7 +92,7 @@ def transcribe_audio(filename: str) -> str:
 
 
 def generate_reply(conversation: list) -> str:
-    """Generate a ChatGPT response.
+    """Generate an entelai response.
 
     :param conversation: A list of previous user and assistant messages.
     :returns: The ChatGPT response.
@@ -172,7 +172,7 @@ def transcribe():
 
 @app.route('/ask', methods=['POST'])
 def ask():
-    """Generate a ChatGPT response from the given conversation, then convert it to audio using ElevenLabs."""
+    """Generate a entelai response from the given conversation, then convert it to audio using ElevenLabs."""
     conversation = request.get_json(force=True).get("conversation", "")
     reply = generate_reply(conversation)
     reply_file = f"{uuid.uuid4()}.mp3"
