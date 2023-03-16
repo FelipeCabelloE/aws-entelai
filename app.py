@@ -8,18 +8,11 @@ from boto3 import Session
 from botocore.exceptions import BotoCoreError, ClientError
 from src import aws_transcribe 
 from src import entelai_parser
-# Add your OpenAI API key
-OPENAI_API_KEY = ""
-openai.api_key = OPENAI_API_KEY
 
-# Add your ElevenLabs API key
-ELEVENLABS_API_KEY = ""
-ELEVENLABS_VOICE_STABILITY = 0.30
-ELEVENLABS_VOICE_SIMILARITY = 0.75
 
-# Choose your favorite ElevenLabs voice
-ELEVENLABS_VOICE_NAME = "Lucia"
-ELEVENLABS_ALL_VOICES = []
+# Choose your favorite entelai voice
+POLLY_VOICE = "Lucia"
+
 
 
 # Mapping the output format used in the client to the content type for the
@@ -91,7 +84,7 @@ def transcribe_audio(filename: str) -> str:
     
 
 
-def generate_reply(conversation: list) -> str:
+def generate_reply(conversation: str) -> str:
     """Generate an entelai response.
 
     :param conversation: A list of previous user and assistant messages.
@@ -99,13 +92,8 @@ def generate_reply(conversation: list) -> str:
     :rtype: str
 
     """
-    response = openai.ChatCompletion.create(
-      model="gpt-3.5-turbo",
-      messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-        ] + conversation
-    )
-    return response["choices"][0]["message"]["content"]
+    response = entelai_parser.entelai_post_request(conversation).json()
+    return response["messages"][0]["text"]
 
 
 def generate_audio(text: str, output_path: str = "") -> str:
@@ -119,33 +107,13 @@ def generate_audio(text: str, output_path: str = "") -> str:
     :rtype: str
 
     """
-    voices = ELEVENLABS_ALL_VOICES
-    try:
-        voice_id = next(filter(lambda v: v["name"] == ELEVENLABS_VOICE_NAME, voices))["voice_id"]
-    except StopIteration:
-        voice_id = voices[0]["voice_id"]
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-    headers = {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "content-type": "application/json"
-    }
-    data = {
-        "text": text,
-        "voice_settings": {
-            "stability": ELEVENLABS_VOICE_STABILITY,
-            "similarity_boost": ELEVENLABS_VOICE_SIMILARITY,
-        }
-    }
-    response = requests.post(url, json=data, headers=headers)
-    with open(output_path, "wb") as output:
-        output.write(response.content)
-    return output_path
+    
 
 
 @app.route('/')
 def index():
     """Render the index page."""
-    return render_template('index.html', voice=ELEVENLABS_VOICE_NAME)
+    return render_template('index.html', voice=POLLY_VOICE)
 
 
 @app.route('/transcribe', methods=['POST'])
@@ -188,11 +156,6 @@ def listen(filename):
     return send_file(f"outputs/{filename}", mimetype="audio/mp3", as_attachment=False)
 
 
-if ELEVENLABS_API_KEY:
-    if not ELEVENLABS_ALL_VOICES:
-        ELEVENLABS_ALL_VOICES = get_voices()
-    if not ELEVENLABS_VOICE_NAME:
-        ELEVENLABS_VOICE_NAME = ELEVENLABS_ALL_VOICES[0]["name"]
 
 if __name__ == '__main__':
     app.run(debug=True)
