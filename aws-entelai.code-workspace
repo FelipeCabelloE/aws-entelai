@@ -10,5 +10,7 @@
 			"path": "../aws-amazon-polly-flask-sample"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"python.analysis.logLevel": "Warning"
+	}
 }

@@ -83,8 +83,8 @@ def transcribe_audio(filename: str) -> str:
     return transcript_simple['results']['transcripts'][0]['transcript']
     
 
-
-def generate_reply(conversation: str) -> str:
+@app.route('/reply', methods=['POST'])
+def generate_reply():
     """Generate an entelai response.
 
     :param conversation: A list of previous user and assistant messages.
@@ -92,21 +92,43 @@ def generate_reply(conversation: str) -> str:
     :rtype: str
 
     """
-    response = entelai_parser.entelai_post_request(conversation).json()
-    return response["messages"][0]["text"]
+    text = request.get_json()['text']
+    response = entelai_parser.entelai_post_request(text).json()
+    entelai_text = response["messages"][0]["text"]
+    return jsonify({'text': entelai_text})
 
 
-def generate_audio(text: str, output_path: str = "") -> str:
-    """Converts
 
-    :param text: The text to convert to audio.
-    :type text : str
-    :param output_path: The location to save the finished mp3 file.
-    :type output_path: str
-    :returns: The output path for the successfully saved file.
-    :rtype: str
+    
+@app.route('/read', methods=['GET'])
+def read():
+    """Handles routing for reading text (speech synthesis)"""
+    # Get the parameters from the query string
+    try:
+        outputFormat = request.args.get('outputFormat')
+        text = request.args.get('text')
+        voiceId = request.args.get('voiceId')
+    except TypeError:
+        raise InvalidUsage("Wrong parameters", status_code=400)
 
-    """
+    # Validate the parameters, set error flag in case of unexpected
+    # values
+    if len(text) == 0 or len(voiceId) == 0 or \
+            outputFormat not in AUDIO_FORMATS:
+        raise InvalidUsage("Wrong parameters", status_code=400)
+    else:
+        try:
+            # Request speech synthesis
+            response = polly.synthesize_speech(Text=text,
+                                               VoiceId=voiceId,
+                                               OutputFormat=outputFormat)
+        except (BotoCoreError, ClientError) as err:
+            # The service returned an error
+            raise InvalidUsage(str(err), status_code=500)
+
+        return send_file(response.get("AudioStream"),
+                         AUDIO_FORMATS[outputFormat])
+    
     
 
 
@@ -118,7 +140,7 @@ def index():
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe():
-    """Transcribe the given audio to text using Whisper."""
+    """Transcribe the given audio to text using transcribe."""
     if 'file' not in request.files:
         return 'No file found', 400
     file = request.files['file']
@@ -143,6 +165,8 @@ def ask():
     """Generate a entelai response from the given conversation, then convert it to audio using ElevenLabs."""
     conversation = request.get_json(force=True).get("conversation", "")
     reply = generate_reply(conversation)
+    
+    
     reply_file = f"{uuid.uuid4()}.mp3"
     reply_path = f"outputs/{reply_file}"
     os.makedirs(os.path.dirname(reply_path), exist_ok=True)

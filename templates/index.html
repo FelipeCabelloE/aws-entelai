@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html data-bs-theme="dark">
+
 <head>
     <title>Ask {{voice}}</title>
     <meta charset="utf-8">
@@ -14,6 +15,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/typeit@8.7.1/dist/index.umd.js"></script>
 </head>
+
 <body>
     <div class="container text-center mt-5">
         <div class="row">
@@ -22,15 +24,19 @@
                 <h1 class="mb-4">Ask {{voice}}</h1>
                 <form>
                     <div class="form-group mb-3">
-                        <textarea id="transcription-box" class="form-control" rows="3" placeholder="Escribe una pregunta o presiona grabar."></textarea>
+                        <textarea id="transcription-box" class="form-control" rows="3"
+                            placeholder="Escribe una pregunta o presiona grabar."></textarea>
                     </div>
                     <div class="form-group d-flex justify-content-between">
-                        <button type="button" class="btn btn-danger" style="width:48%" id="record-button">Record</button>
-                        
-                        <button type="button" class="btn btn-primary" style="width:48%" id="ask-button">Pregunta</button>
+                        <button type="button" class="btn btn-danger" style="width:48%"
+                            id="record-button">Record</button>
+
+                        <button type="button" class="btn btn-primary" style="width:48%"
+                            id="ask-button">Pregunta</button>
                     </div>
 
                 </form>
+                <audio id="player"></audio>
                 <div class="audio-player">
                     <audio id="audio-element"></audio>
                 </div>
@@ -41,7 +47,7 @@
         </div>
     </div>
     <script>
-         
+
 
         $(document).ready(() => {
             // Get references to HTML elements
@@ -59,13 +65,12 @@
 
             // Initialize TypeIt
             new TypeIt("#response-text", {
-              strings: "Bienvenido\n¿Cómo te puedo ayudar?",
-              speed: 40,
-              waitUntilVisible: true,
-              cursorChar: "▊",
+                strings: "Bienvenido\n¿Cómo te puedo ayudar?",
+                speed: 40,
+                waitUntilVisible: true,
+                cursorChar: "▊",
             }).go();
             // Load the list of available voices and display them in a menu
-        
 
 
             // Ask question and play audio when ask button is clicked
@@ -73,31 +78,76 @@
                 disableButton(recordButton);
                 disableButton(askButton);
                 askButton[0].innerHTML = "Pensando...";
-                conversation.push({role: "user", "content": transcriptionBox.val()})
-                const textData = { conversation: conversation };
+                info_to_polly = { 'text': transcriptionBox.val() };
+
                 $.ajax({
                     type: 'POST',
-                    url: '/ask',
-                    data: JSON.stringify(textData),
+                    url: '/reply',
+                    data: JSON.stringify(info_to_polly),
                     contentType: 'application/json',
+                    processData: false,
                     success: (data) => {
-                        const fileURL = data.audio;
                         $("#response-text")[0].innerHTML = "";
-                        conversation.push({role: "assistant", "content": data.text})
-                        new TypeIt("#response-text", {
-                          strings: data.text,
-                          speed: 39,
-                          waitUntilVisible: false,
-                          cursorChar: "▊",
-                        }).go();
-                        audioElement.src = fileURL;
-                        audioElement.controls = true;
-                        audioElement.play();
-                        enableButton(recordButton);
-                        enableButton(askButton);
-                        askButton[0].innerHTML = "Pregunta";
+                        async function async_typeit(data) {new TypeIt("#response-text", {
+                            strings: data.text,
+                            speed: 39,
+                            waitUntilVisible: false,
+                            cursorChar: "▊",
+                        }).go()};
+                        async_typeit(data)
+                        
+                        if (voiceMenu.selectedIndex <= 0 || transcriptionBox.val().length === 0) {
+                            alert('Please fill in all the fields.');
+                        } else {
+                            var selectedVoice = 'Lucia';
+
+                            // Point the player to the streaming server
+                            audioElement.src = '/read?voiceId=' +
+                                encodeURIComponent(selectedVoice) +
+                                '&text=' + encodeURIComponent(data.text) +
+                                '&outputFormat=' + 'ogg_vorbis';
+
+                            audioElement.play();
+                        };
+                        
+
+
                     }
+                    
                 });
+                enableButton(recordButton);
+                enableButton(askButton);
+                askButton[0].innerHTML = "Pregunta";
+                // conversation.push({role: "user", "content": transcriptionBox.val()})
+                // const textData = { conversation: conversation };
+                // $.ajax({
+                //     type: 'POST',
+                //     url: '/ask',
+                //     data: JSON.stringify(textData),
+                //     contentType: 'application/json',
+                //     success: (data) => {
+                //         const fileURL = data.audio;
+                //         $("#response-text")[0].innerHTML = "";
+                //         conversation.push({role: "assistant", "content": data.text})
+                //         new TypeIt("#response-text", {
+                //           strings: data.text,
+                //           speed: 39,
+                //           waitUntilVisible: false,
+                //           cursorChar: "▊",
+                //         }).go();
+                //         audioElement.src = fileURL;
+                //         audioElement.controls = true;
+                //         audioElement.play();
+                //         enableButton(recordButton);
+                //         enableButton(askButton);
+                //         askButton[0].innerHTML = "Pregunta";
+                //     }
+                // });
+
+
+
+
+
             });
 
 
@@ -126,7 +176,6 @@
                             transcriptionBox.val(data.text);
                             enableButton(recordButton);
                             recordButton[0].innerHTML = "Grabar";
-                            askButton.click();
                         }
                     });
                 };
@@ -147,4 +196,5 @@
         });
     </script>
 </body>
+
 </html>
