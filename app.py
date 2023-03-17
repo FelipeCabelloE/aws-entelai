@@ -2,8 +2,8 @@ import openai
 import os
 import requests
 import uuid
-from flask import Flask, request, jsonify, send_file, render_template, Response
-
+from flask import Flask, request, jsonify, send_file, render_template, Response, session, flash, redirect, abort
+from flask_session import Session as Sess
 from boto3 import Session
 from botocore.exceptions import BotoCoreError, ClientError
 from src import aws_transcribe 
@@ -55,6 +55,43 @@ def handle_invalid_usage(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
+
+
+
+############## Login ##########
+@app.route('/')
+def index():
+    """Render the index page."""
+    if not Sess.get('logged_in'):
+        return render_template('login.html')
+    else:
+        return render_template('index.html', voice=POLLY_VOICE)
+
+
+
+@app.route('/login', methods=['POST'])
+def do_admin_login():
+    if request.form['password'] == 'password' and request.form['username'] == 'admin':
+        session['logged_in'] = True
+        return index()
+    else:
+        flash('wrong password!')
+        return index()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###############
 
 
 
@@ -132,10 +169,6 @@ def read():
     
 
 
-@app.route('/')
-def index():
-    """Render the index page."""
-    return render_template('index.html', voice=POLLY_VOICE)
 
 
 @app.route('/transcribe', methods=['POST'])
@@ -182,4 +215,5 @@ def listen(filename):
 
 
 if __name__ == '__main__':
+    app.secret_key = os.urandom(12)
     app.run(debug=True)
