@@ -1,0 +1,10 @@
+# Ignore everything
+*
+
+# Allow files and directories
+!/templates
+!/src
+!app.py
+!.env
+!/static
+!requirements.txt

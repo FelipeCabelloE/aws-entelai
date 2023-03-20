@@ -1,0 +1,8 @@
+{
+    "flask": {
+        "image": ":luciapoc-service.luciapoc-container.2",
+        "ports": {
+            "5000": "HTTP"
+        }
+    }
+}

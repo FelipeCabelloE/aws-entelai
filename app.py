@@ -8,7 +8,8 @@ from boto3 import Session
 from botocore.exceptions import BotoCoreError, ClientError
 from src import aws_transcribe 
 from src import entelai_parser
-
+from dotenv import load_dotenv
+load_dotenv()
 
 # Choose your favorite entelai voice
 POLLY_VOICE = "Lucia"
@@ -21,9 +22,15 @@ AUDIO_FORMATS = {"ogg_vorbis": "audio/ogg",
                  "mp3": "audio/mpeg",
                  "pcm": "audio/wave; codecs=1"}
 
+
+AWS_ID_KEY = os.environ.get('AWS_ID_KEY')
+AWS_SECR_KEY = os.environ.get('AWS_SECR_KEY')
+
+
+
 # Create a client using the credentials and region defined in the adminuser
 # section of the AWS credentials and configuration files
-session = Session(profile_name="amazonpoly-felipecabello")
+session = Session(aws_access_key_id=AWS_ID_KEY, aws_secret_access_key=AWS_SECR_KEY, region_name='us-east-1')
 polly = session.client("polly")
 transcribe_client = session.client('transcribe')
 s3_client = session.client('s3')
