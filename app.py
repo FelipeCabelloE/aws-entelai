@@ -9,6 +9,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from src import aws_transcribe 
 from src import entelai_parser
 from dotenv import load_dotenv
+import filetype
 load_dotenv()
 
 # Choose your favorite entelai voice
@@ -142,7 +143,7 @@ def index():
 
 
 
-def transcribe_audio(filename: str) -> str:
+def transcribe_audio(filename: str, filetype:str) -> str:
     """Transcribe audio to text.
     Sends audifile to s3, starts a transcription job, then waits for it to finnish and sends back the answer
 
@@ -155,7 +156,7 @@ def transcribe_audio(filename: str) -> str:
     response = s3_client.upload_file(filename, bucket_name, filename)
     media_uri = f's3://{bucket_name}/{filename}'
     job_name = f'{filename[9:]}'
-    aws_transcribe.start_job(job_name=job_name, media_uri=media_uri, media_format='ogg', language_code='es-ES', transcribe_client=transcribe_client)
+    aws_transcribe.start_job(job_name=job_name, media_uri=media_uri, media_format=filetype, language_code='es-ES', transcribe_client=transcribe_client)
     transcribe_waiter = aws_transcribe.TranscribeCompleteWaiter(transcribe_client)
     transcribe_waiter.wait(job_name)
     job_simple = aws_transcribe.get_job(job_name, transcribe_client)
@@ -225,19 +226,20 @@ def transcribe():
     if 'file' not in request.files:
         return 'No file found', 400
     file = request.files['file']
-    recording_file = f"{uuid.uuid4()}.ogg"
-    recording_path = f"uploads/{recording_file}"
-    os.makedirs(os.path.dirname(recording_path), exist_ok=True)
-    file.save(recording_path)
-    ##file information
-    import filetype
-    kind = filetype.guess(recording_path)
+    kind = filetype.guess(file)
     if kind is None:
         print('Cannot guess file type!')
     else:
         print('File extension: %s' % kind.extension)
         print('File MIME type: %s' % kind.mime)
-    transcription = transcribe_audio(recording_path)
+    recording_file = f"{uuid.uuid4()}.{kind.extension}"
+    recording_path = f"uploads/{recording_file}"
+    os.makedirs(os.path.dirname(recording_path), exist_ok=True)
+    file.save(recording_path)
+    ##file information
+    
+
+    transcription = transcribe_audio(recording_path, kind.extension)
     return jsonify({'text': transcription})
 
 
