@@ -2,8 +2,8 @@ import openai
 import os
 import requests
 import uuid
-from flask import Flask, request, jsonify, send_file, render_template, Response, session, flash, redirect, abort
-from flask_session import Session as Sess
+from flask import Flask, request, jsonify, send_file, render_template, Response, session, flash, redirect, abort, url_for
+import flask_login
 from boto3 import Session
 from botocore.exceptions import BotoCoreError, ClientError
 from src import aws_transcribe 
@@ -58,33 +58,71 @@ def handle_invalid_usage(error):
 
 
 
-############## Login ##########
-@app.route('/')
+############## Login ########## https://pythonspot.com/login-authentication-with-flask/
+
+
+app.secret_key = os.urandom(12)
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
+
+
+# Our mock database.
+users = {'Penpal0647': {'password': 'GwbB4QNfDkiWgo9Z5WeV78uEq3cNMv'}}
+
+class User(flask_login.UserMixin):
+    pass
+
+
+@login_manager.user_loader
+def user_loader(email):
+    if email not in users:
+        return
+
+    user = User()
+    user.id = email
+    return user
+
+
+@login_manager.request_loader
+def request_loader(request):
+    email = request.form.get('email')
+    if email not in users:
+        return
+
+    user = User()
+    user.id = email
+    return user
+
+
+
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    
+    if request.method == 'GET':
+        return '''
+               <form action='login' method='POST'>
+                <input type='text' name='email' id='email' placeholder='username'/>
+                <input type='password' name='password' id='password' placeholder='password'/>
+                <input type='submit' name='submit'/>
+               </form>
+               '''
+               
+    email = request.form['email']
+    if email in users and request.form['password'] == users[email]['password']:
+        user = User()
+        user.id = email
+        flask_login.login_user(user)
+        return redirect(url_for('index'))
+
+    return 'Bad login'
+
+
+@app.route('/index')
+@flask_login.login_required
 def index():
     """Render the index page."""
-    if not Sess.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return render_template('index.html', voice=POLLY_VOICE)
-
-
-
-@app.route('/login', methods=['POST'])
-def do_admin_login():
-    if request.form['password'] == 'password' and request.form['username'] == 'admin':
-        session['logged_in'] = True
-        return index()
-    else:
-        flash('wrong password!')
-        return index()
-
-
-
-
-
-
-
-
+    return render_template('index.html', voice=POLLY_VOICE)
 
 
 
@@ -121,6 +159,7 @@ def transcribe_audio(filename: str) -> str:
     
 
 @app.route('/reply', methods=['POST'])
+@flask_login.login_required
 def generate_reply():
     """Generate an entelai response.
 
@@ -138,6 +177,7 @@ def generate_reply():
 
     
 @app.route('/read', methods=['GET'])
+@flask_login.login_required
 def read():
     """Handles routing for reading text (speech synthesis)"""
     # Get the parameters from the query string
@@ -172,6 +212,7 @@ def read():
 
 
 @app.route('/transcribe', methods=['POST'])
+@flask_login.login_required
 def transcribe():
     """Transcribe the given audio to text using transcribe."""
     if 'file' not in request.files:
@@ -194,6 +235,7 @@ def transcribe():
 
 
 @app.route('/ask', methods=['POST'])
+@flask_login.login_required
 def ask():
     """Generate a entelai response from the given conversation, then convert it to audio using ElevenLabs."""
     conversation = request.get_json(force=True).get("conversation", "")
@@ -208,6 +250,7 @@ def ask():
 
 
 @app.route('/listen/<filename>')
+@flask_login.login_required
 def listen(filename):
     """Return the audio file located at the given filename."""
     return send_file(f"outputs/{filename}", mimetype="audio/mp3", as_attachment=False)
@@ -215,5 +258,5 @@ def listen(filename):
 
 
 if __name__ == '__main__':
-    app.secret_key = os.urandom(12)
-    app.run(debug=True)
+    
+    app.run(host='0.0.0.0', port=5000)

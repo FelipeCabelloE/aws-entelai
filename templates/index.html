@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html data-bs-theme="dark">
+<html data-bs-theme="light">
 
 <head>
     <title>Ask {{voice}}</title>
@@ -20,8 +20,8 @@
     <div class="container text-center mt-5">
         <div class="row">
             <div class="col-12 col-md-6 col-xl-4 mx-auto">
-                <img class="mb-3" src="/static/lucia_icon_no_background.png" alt="" style="height:250px">
-                <h1 class="mb-4">Ask {{voice}}</h1>
+                <img class="mb-3" src="/static/lucia_small_icon_no_background.png" alt="" style="height:250px">
+                <h1 class="mb-4">Pregúntale a {{voice}}</h1>
                 <form>
                     <div class="form-group mb-3">
                         <textarea id="transcription-box" class="form-control" rows="3"
@@ -29,7 +29,7 @@
                     </div>
                     <div class="form-group d-flex justify-content-between">
                         <button type="button" class="btn btn-danger" style="width:48%"
-                            id="record-button">Record</button>
+                            id="record-button">Grabar</button>
 
                         <button type="button" class="btn btn-primary" style="width:48%"
                             id="ask-button">Pregunta</button>
@@ -118,34 +118,6 @@
                 enableButton(recordButton);
                 enableButton(askButton);
                 askButton[0].innerHTML = "Pregunta";
-                // conversation.push({role: "user", "content": transcriptionBox.val()})
-                // const textData = { conversation: conversation };
-                // $.ajax({
-                //     type: 'POST',
-                //     url: '/ask',
-                //     data: JSON.stringify(textData),
-                //     contentType: 'application/json',
-                //     success: (data) => {
-                //         const fileURL = data.audio;
-                //         $("#response-text")[0].innerHTML = "";
-                //         conversation.push({role: "assistant", "content": data.text})
-                //         new TypeIt("#response-text", {
-                //           strings: data.text,
-                //           speed: 39,
-                //           waitUntilVisible: false,
-                //           cursorChar: "▊",
-                //         }).go();
-                //         audioElement.src = fileURL;
-                //         audioElement.controls = true;
-                //         audioElement.play();
-                //         enableButton(recordButton);
-                //         enableButton(askButton);
-                //         askButton[0].innerHTML = "Pregunta";
-                //     }
-                // });
-
-
-
 
 
             });
